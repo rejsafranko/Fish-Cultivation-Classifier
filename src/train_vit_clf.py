@@ -1,10 +1,13 @@
+import numpy as np
 import torch
-from torch.utils.data import DataLoader
-from datasets import load_dataset
+from datasets import load_dataset, load_metric
+from transformers import (
+    ViTForImageClassification,
+    ViTFeatureExtractor,
+    Trainer,
+    TrainingArguments,
+)
 from argparse import ArgumentParser
-from model.vitlightning import ViTLightningModule
-from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import EarlyStopping
 
 
 def parse_args():
@@ -14,8 +17,15 @@ def parse_args():
     return parser.parse_args()
 
 
+def collate_fn(examples):
+    pixel_values = torch.stack([example["pixel_values"] for example in examples])
+    labels = torch.tensor([example["labels"] for example in examples])
+    return {"pixel_values": pixel_values, "labels": labels}
+
+
 def create_dataloaders_and_mappings(data_path):
     dataset = load_dataset("imagefolder", data_dir=args.data_path)
+
     splits = dataset["train"].train_test_split(test_size=0.1)
     dataset["train"] = splits["train"]
     dataset["val"] = splits["test"]
@@ -23,46 +33,92 @@ def create_dataloaders_and_mappings(data_path):
     id2label = {
         id: label for id, label in enumerate(dataset["train"].features["label"].names)
     }
+
     label2id = {label: id for id, label in id2label.items()}
 
-    train_dataloader = DataLoader(dataset["train"], shuffle=True, collate_fn=collate_fn)
-    val_dataloader = DataLoader(dataset["val"], collate_fn=collate_fn)
-    test_dataloader = DataLoader(dataset["test"], collate_fn=collate_fn)
-
-    dataloaders = {}
-    dataloaders["train"] = train_dataloader
-    dataloaders["val"] = val_dataloader
-    dataloaders["test"] = test_dataloader
-
-    return dataloaders, id2label, label2id
+    return dataset, id2label, label2id
 
 
-def collate_fn(examples):
-    pixel_values = torch.stack([example["pixel_values"] for example in examples])
-    labels = torch.tensor([example["label"] for example in examples])
-    return {"pixel_values": pixel_values, "labels": labels}
+def compute_metrics(eval_pred):
+    metric1 = load_metric("accuracy")
+    metric2 = load_metric("precision")
+    metric3 = load_metric("recall")
+    metric4 = load_metric("f1")
+
+    logits, labels = eval_pred
+    predictions = np.argmax(logits, axis=-1)
+    accuracy = metric1.compute(predictions=predictions, references=labels)["accuracy"]
+    precision = metric2.compute(
+        predictions=predictions, references=labels, average="weighted"
+    )["precision"]
+    recall = metric3.compute(
+        predictions=predictions, references=labels, average="weighted"
+    )["recall"]
+    f1 = metric4.compute(
+        predictions=predictions, references=labels, average="weighted"
+    )["f1"]
+    return {"accuracy": accuracy, "precision": precision, "recall": recall, "f1": f1}
 
 
 def main(args):
-    dataloaders, id2label, label2id = create_dataloaders_and_mappings(args.data_path)
-    num_labels = len(id2label)
-
-    early_stop_callback = EarlyStopping(
-        monitor="val_loss", patience=3, strict=False, verbose=False, mode="min"
+    dataset, id2label, label2id = create_dataloaders_and_mappings(
+        args.model_id, args.data_path
     )
 
-    model = ViTLightningModule(
-        args.model_id, num_labels, id2label, label2id, dataloaders
+    feature_extractor = ViTFeatureExtractor.from_pretrained(args.model_id)
+
+    def transform(example_batch):
+        inputs = feature_extractor(
+            [x.convert("RGB") for x in example_batch["image"]], return_tensors="pt"
+        )
+        inputs["labels"] = example_batch["label"]
+        return inputs
+
+    dataset = dataset.with_transform(transform)
+
+    model = ViTForImageClassification.from_pretrained(
+        pretrained_model_name_or_path=args.model_id,
+        num_labels=len(id2label),
+        id2label=id2label,
+        label2id=label2id,
     )
 
-    # model = ViTLightningModule.load_from_checkpoint("/path/to/checkpoint.ckpt")
+    training_args = TrainingArguments(
+        output_dir="../model/",
+        per_device_train_batch_size=16,
+        evaluation_strategy="steps",
+        num_train_epochs=4,
+        fp16=True,
+        save_steps=100,
+        eval_steps=100,
+        logging_steps=10,
+        learning_rate=2e-4,
+        save_total_limit=2,
+        remove_unused_columns=False,
+        push_to_hub=False,
+        report_to="tensorboard",
+        load_best_model_at_end=True,
+    )
 
     trainer = Trainer(
-        gpus=1, callbacks=early_stop_callback
-    )  # default_root_dir="some/path/" za Colab
+        model=model,
+        args=training_args,
+        data_collator=collate_fn,
+        compute_metrics=compute_metrics,
+        train_dataset=dataset["train"],
+        eval_dataset=dataset["val"],
+        tokenizer=feature_extractor,
+    )
 
-    trainer.fit()
-    trainer.test()
+    train_results = trainer.train()
+    trainer.save_model()
+    trainer.log_metrics("train", train_results.metrics)
+    trainer.save_metrics("train", train_results.metrics)
+    trainer.save_state()
+
+    metrics = trainer.evaluate(dataset["test"])
+    trainer.log_metrics("eval", metrics)
+    trainer.save_metrics("eval", metrics)
 
 
 if __name__ == "__main__":
