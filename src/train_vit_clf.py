@@ -9,7 +9,6 @@ from transformers import (
     TrainingArguments,
 )
 from argparse import ArgumentParser
-from PIL import Image
 
 
 def parse_args():
