@@ -85,10 +85,6 @@ def main(args):
         label2id=label2id,
     )
 
-    model.classifier = torch.nn.Sequential(
-        torch.nn.Dropout(0.5), torch.nn.Linear(768, 3), torch.nn.Softmax(dim=1)
-    )
-
     training_args = TrainingArguments(
         output_dir="../model/",
         per_device_train_batch_size=16,
