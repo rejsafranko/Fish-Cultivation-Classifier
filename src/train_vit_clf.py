@@ -1,6 +1,7 @@
 import numpy as np
 import torch
-from datasets import load_dataset, load_metric
+from datasets import load_dataset
+from evaluate import load
 from transformers import (
     ViTForImageClassification,
     ViTFeatureExtractor,
@@ -8,6 +9,7 @@ from transformers import (
     TrainingArguments,
 )
 from argparse import ArgumentParser
+from PIL import Image
 
 
 def parse_args():
@@ -24,9 +26,8 @@ def collate_fn(examples):
 
 
 def create_dataloaders_and_mappings(data_path):
-    dataset = load_dataset("imagefolder", data_dir=args.data_path)
-
-    splits = dataset["train"].train_test_split(test_size=0.1)
+    dataset = load_dataset("imagefolder", data_dir=data_path)
+    splits = dataset["train"].train_test_split(test_size=0.33)
     dataset["train"] = splits["train"]
     dataset["val"] = splits["test"]
 
@@ -40,10 +41,10 @@ def create_dataloaders_and_mappings(data_path):
 
 
 def compute_metrics(eval_pred):
-    metric1 = load_metric("accuracy")
-    metric2 = load_metric("precision")
-    metric3 = load_metric("recall")
-    metric4 = load_metric("f1")
+    metric1 = load("accuracy")
+    metric2 = load("precision")
+    metric3 = load("recall")
+    metric4 = load("f1")
 
     logits, labels = eval_pred
     predictions = np.argmax(logits, axis=-1)
@@ -61,17 +62,18 @@ def compute_metrics(eval_pred):
 
 
 def main(args):
-    dataset, id2label, label2id = create_dataloaders_and_mappings(
-        args.model_id, args.data_path
+    dataset, id2label, label2id = create_dataloaders_and_mappings(args.data_path)
+    feature_extractor = ViTFeatureExtractor.from_pretrained(
+        args.model_id,
+        do_resize=False,
+        patch_size=64,
     )
-
-    feature_extractor = ViTFeatureExtractor.from_pretrained(args.model_id)
 
     def transform(example_batch):
         inputs = feature_extractor(
             [x.convert("RGB") for x in example_batch["image"]], return_tensors="pt"
         )
-        inputs["labels"] = example_batch["label"]
+        inputs["label"] = example_batch["label"]
         return inputs
 
     dataset = dataset.with_transform(transform)
@@ -83,11 +85,15 @@ def main(args):
         label2id=label2id,
     )
 
+    model.classifier = torch.nn.Sequential(
+        torch.nn.Dropout(0.5), torch.nn.Linear(768, 3), torch.nn.Softmax(dim=1)
+    )
+
     training_args = TrainingArguments(
         output_dir="../model/",
         per_device_train_batch_size=16,
         evaluation_strategy="steps",
-        num_train_epochs=4,
+        num_train_epochs=6,
         fp16=True,
         save_steps=100,
         eval_steps=100,
@@ -117,8 +123,8 @@ def main(args):
     trainer.save_state()
 
     metrics = trainer.evaluate(dataset["test"])
-    trainer.log_metrics("eval", metrics)
-    trainer.save_metrics("eval", metrics)
+    trainer.log_metrics("test", metrics)
+    trainer.save_metrics("test", metrics)
 
 
 if __name__ == "__main__":
