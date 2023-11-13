@@ -1,1 +1,2 @@
 # ViT-Fish-Classification
+This repository focuses on classifying fish images using a private dataset from the Oceanographic Institute of Croatia. The project leverages advanced techniques, including data augmentation, a Vision Transformer (ViT), and a ResNet50 architecture to achieve accurate and robust classification results. Additionally, a Grad-CAM visualizer has been implemented for AI explainability, providing insights into the model's decision-making process.
