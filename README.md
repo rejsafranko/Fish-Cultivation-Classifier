@@ -1,4 +1,4 @@
-# Fish-Image-Classification
+# Fish Image Classification with Deep Models
 
 ## Overview
 This repository is part of a university seminar and focuses on classifying fish images using a private dataset from the Institute of Oceanography and Fisheries of Croatia. The project leverages advanced techniques, including data augmentation, a Vision Transformer (ViT), and a ResNet50 architecture to achieve accurate and robust classification results. Additionally, a Grad-CAM visualizer has been implemented for AI explainability, providing insights into the model's decision-making process.
