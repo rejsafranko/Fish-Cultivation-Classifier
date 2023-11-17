@@ -14,7 +14,7 @@ Grad-CAM Visualizer: Integrated a Grad-CAM visualizer to interpret and visualize
 
 ## Project Structure
 
-Explore the Jupyter notebooks or Python scripts to understand the implementation details and experiment with the models.
+Explore the Jupyter notebooks or Python scripts to understand the implementation details and model experiments.
 
 src/notebooks: contains Jupyter notebooks meant for running the experiments on Google Colaboratory
 
