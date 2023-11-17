@@ -17,6 +17,9 @@ Grad-CAM Visualizer: Integrated a Grad-CAM visualizer to interpret and visualize
 Explore the Jupyter notebooks or Python scripts to understand the implementation details and experiment with the models.
 
 src/notebooks: contains Jupyter notebooks meant for running the experiments on Google Colaboratory
+
 src/scripts: contains the script version of the experiments meant for running localy
+
 docs/: contains the technical document describing and explaining the technologies and experiments
+
 model/: meant for saving the fine-tuned models
