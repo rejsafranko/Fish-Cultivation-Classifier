@@ -95,7 +95,9 @@ def main():
     ]
 
     # Load the image and turn it to Tensor.
-    image_path = "./data/test/divlje/divlje_test_2020_WS_001.JPG"  # Path to your problematic image
+    image_path = (
+        "data/test/divlje/divlje_test_2020_WS_001.JPG"  # Path to your problematic image
+    )
     image = Image.open(image_path)
     image_tensor = transforms.ToTensor()(image)
 

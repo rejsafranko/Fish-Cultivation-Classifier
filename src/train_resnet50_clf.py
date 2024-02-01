@@ -106,7 +106,7 @@ def main(args):
 
     # Define callbacks.
     checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-        filepath="/model/resnet50/",
+        filepath="models/resnet50/",
         monitor="val_accuracy",
         save_best_only=True,
         verbose=1,
@@ -130,4 +130,4 @@ def main(args):
     )
 
     # Save the model.
-    model.save("../../model/resnet50")
+    model.save("models/resnet50")

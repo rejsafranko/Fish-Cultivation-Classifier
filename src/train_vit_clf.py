@@ -88,7 +88,7 @@ def main():
         inputs["labels"] = example_batch["label"]
         return inputs
 
-    dataset = prepare_dataset("../../data")
+    dataset = prepare_dataset("data/")
     dataset = dataset.with_transform(transform)
 
     # ID to label mappings and vice-versa.
@@ -111,7 +111,7 @@ def main():
 
     # Prepare the Trainer.
     training_args = TrainingArguments(
-        output_dir="../../model/vit",
+        output_dir="models/vit",
         per_device_train_batch_size=8,
         per_device_eval_batch_size=8,
         evaluation_strategy="steps",
