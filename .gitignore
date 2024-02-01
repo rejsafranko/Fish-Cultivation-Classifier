@@ -1,0 +1,5 @@
+model/resnet50/*
+!model/resnet50/.gitkeep
+
+model/vit/*
+!model/vit/.gitkeep

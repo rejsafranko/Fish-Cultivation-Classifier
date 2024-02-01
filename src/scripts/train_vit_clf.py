@@ -10,13 +10,9 @@ from transformers import (
 )
 from transformers.trainer_utils import EvalPrediction
 from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score
-from argparse import ArgumentParser
 
 
-def parse_args():
-    pass
-
-
+# Utility function which loads the data splits, expands the train set with transformations and encodes the labels.
 def prepare_dataset(data_dir):
     train_dataset = load_dataset("imagefolder", data_dir=data_dir, split="train")
     traineval_dataset = train_dataset.train_test_split(test_size=0.33)
@@ -54,6 +50,7 @@ def prepare_dataset(data_dir):
     return dataset
 
 
+# Utility function which padds the inputs.
 def collate_fn(batch):
     return {
         "pixel_values": torch.stack([x["pixel_values"] for x in batch]),
@@ -61,6 +58,7 @@ def collate_fn(batch):
     }
 
 
+# Utility function which defines evaluation metrics.
 def compute_metrics(eval_pred: EvalPrediction):
     preds = np.argmax(eval_pred.predictions, axis=1)
     return {
@@ -71,10 +69,10 @@ def compute_metrics(eval_pred: EvalPrediction):
     }
 
 
-def main(args):
+def main():
     # Configure the Feature Extractor.
     feature_extractor = ViTFeatureExtractor.from_pretrained(
-        args.model_name_or_path,
+        "google/vit-base-patch16-224-in21k",
         do_resize=False,
         patch_size=64,
     )
@@ -90,7 +88,7 @@ def main(args):
         inputs["labels"] = example_batch["label"]
         return inputs
 
-    dataset = prepare_dataset(args.data_dir)
+    dataset = prepare_dataset("../../data")
     dataset = dataset.with_transform(transform)
 
     # ID to label mappings and vice-versa.
@@ -102,7 +100,7 @@ def main(args):
     # Configure the model.
     # Set interpolate_pos_encoding=True in the source code.
     model = ViTForImageClassification.from_pretrained(
-        args.model_name_or_path,
+        "google/vit-base-patch16-224-in21k",
         num_labels=len(id2label),
         id2label=id2label,
         label2id=label2id,
@@ -113,7 +111,7 @@ def main(args):
 
     # Prepare the Trainer.
     training_args = TrainingArguments(
-        output_dir="./model/vit",
+        output_dir="../../model/vit",
         per_device_train_batch_size=8,
         per_device_eval_batch_size=8,
         evaluation_strategy="steps",
@@ -142,7 +140,7 @@ def main(args):
         tokenizer=feature_extractor,
     )
 
-    # Train the model
+    # Train and save the model.
     train_results = trainer.train()
     trainer.save_model()
     trainer.log_metrics("train", train_results.metrics)
@@ -151,5 +149,4 @@ def main(args):
 
 
 if __name__ == "__main__":
-    args = parse_args()
-    main(args)
+    main()

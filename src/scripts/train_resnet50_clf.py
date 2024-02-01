@@ -8,13 +8,12 @@ from tensorflow.keras.callbacks import *
 from tensorflow.keras.preprocessing.image import *
 from tensorflow.keras.utils import *
 from tensorflow.keras import *
-from sklearn.model_selection import train_test_split
 from torchvision import transforms
 from datasets import load_dataset, concatenate_datasets, DatasetDict
 import numpy as np
-from sklearn import metrics
 
 
+# Utility function which loads the data splits, expands the train set with transformations and encodes the labels.
 def prepare_dataset(data_dir):
     train_dataset = load_dataset("imagefolder", data_dir=data_dir, split="train")
     traineval_dataset = train_dataset.train_test_split(test_size=0.33)
@@ -64,7 +63,7 @@ def prepare_dataset(data_dir):
     return X_train, y_train, X_valid, y_valid, X_test, y_test
 
 
-# Create model configuration.
+# Utility function which builds the classification MLP on the base model and configures the loss and optimizer.
 def configure_model():
     base_model = ResNet50(
         input_shape=(512, 768, 3), weights="imagenet", include_top=False
@@ -131,4 +130,4 @@ def main(args):
     )
 
     # Save the model.
-    model.save("./model/resnet50")
+    model.save("../../model/resnet50")
