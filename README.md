@@ -15,6 +15,10 @@ This repository supports an academic project which focuses on creating a fish cu
 
 - **Grad-CAM Visualizer**: Integrated a Grad-CAM visualizer to interpret and visualize the model's attention, offering insights into the regions of the image influencing the classification decision.
 
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 ```docs/```: contains the technical document describing and explaining the technologies and experiments
 
 ```models/```: meant for saving the fine-tuned models
